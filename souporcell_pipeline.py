@@ -402,7 +402,7 @@ def freebayes(args, bam, fasta):
         with open(args.out_dir + "/common_variants_covered_tmp.vcf", 'w') as vcf:
             subprocess.check_call(["bedtools", "intersect", "-wa", "-a", args.common_variants, "-b", args.out_dir + "/depth_merged.bed"], stdout = vcf)
         with open(args.out_dir + "/common_variants_covered_tmp.vcf") as vcf:
-            with open(args.common_variants) as common:
+            with gzip.open(args.common_variants, 'rt') as common:
                 with open(args.out_dir + "/common_variants_covered.vcf",'w') as out:
                     for line in common:
                         if line.startswith("#"):
