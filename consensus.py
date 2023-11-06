@@ -2,6 +2,7 @@
 import pystan
 import argparse
 import vcf
+import gzip
 
 parser = argparse.ArgumentParser(description="consensus genotype calling and ambient RNA estimation")
 parser.add_argument("-c","--clusters",required=True,help="tsv cluster file from the troublet output")
@@ -436,7 +437,7 @@ with open(tmp_vcf,'w') as geno:
             newrec.samples = calls
             vcfwriter.write_record(newrec)
 with open(tmp_vcf) as tmp:
-    with open(args.vcf_out,'w') as out:
+    with gzip.open(args.vcf_out, 'wt') as out:
         for line in tmp:
             if line.startswith("#"):
                 if line.startswith("#CHROM\tPOS"):
