@@ -525,8 +525,8 @@ def vartrix(args, final_vcf, final_bam):
 
 def souporcell(args, ref_mtx, alt_mtx, final_vcf):
     print("running souporcell clustering")
-    cluster_file = args.out_dir + "/clusters_tmp.tsv"
-    with open(cluster_file, 'w') as log:
+    cluster_file = args.out_dir + "/clusters_tmp.tsv.gz"
+    with gzip.open(cluster_file, 'wt') as log:
         with open(args.out_dir+"/clusters.err",'w') as err:
             cmd = ["souporcell.py", "-k", args.clusters, "-a", alt_mtx, "-r", ref_mtx,
                 "--restarts", str(args.restarts), "-b", args.barcodes, "--min_ref", args.min_ref, "--min_alt", args.min_alt,
@@ -542,11 +542,12 @@ def souporcell(args, ref_mtx, alt_mtx, final_vcf):
 
 def doublets(args, ref_mtx, alt_mtx, cluster_file):
     print("running souporcell doublet detection")
-    doublet_file = args.out_dir + "/clusters.tsv"
-    with open(doublet_file, 'w') as dub:
+    doublet_file = args.out_dir + "/clusters.tsv.gz"
+    with gzip.open(doublet_file, 'wt') as dub:
         with open(args.out_dir+"/doublets.err",'w') as err:
             directory = os.path.dirname(os.path.realpath(__file__))
             subprocess.check_call([directory+"/troublet", "--alts", alt_mtx, "--refs", ref_mtx, "--clusters", cluster_file], stdout = dub, stderr = err)
+    subprocess.check_call(['rm', cluster_file])
     subprocess.check_call(['touch', args.out_dir + "/troublet.done"])
     return(doublet_file)
 
@@ -599,10 +600,10 @@ ref_mtx = args.out_dir + "/ref.mtx"
 alt_mtx = args.out_dir + "/alt.mtx"
 if not(os.path.exists(args.out_dir + "/clustering.done")):
     souporcell(args, ref_mtx, alt_mtx, final_vcf)
-cluster_file = args.out_dir + "/clusters_tmp.tsv"
+cluster_file = args.out_dir + "/clusters_tmp.tsv.gz"
 if not(os.path.exists(args.out_dir + "/troublet.done")):
     doublets(args, ref_mtx, alt_mtx, cluster_file)
-doublet_file = args.out_dir + "/clusters.tsv"
+doublet_file = args.out_dir + "/clusters.tsv.gz"
 if not(os.path.exists(args.out_dir + "/consensus.done")):
     consensus(args, ref_mtx, alt_mtx, doublet_file)
 print("done")
