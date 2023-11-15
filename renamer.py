@@ -63,9 +63,9 @@ for (index,read) in enumerate(bam):
     readname = read.qname
     if read.has_tag(CELL_TAG) and read.get_tag(CELL_TAG) in cell_barcodes:
         if args.no_umi:
-            print("@"+read.qname+";"+cell_barcode+"\n")
+            print("@"+read.qname+";"+cell_barcode)
         else:
-            print("@"+read.qname+";"+cell_barcode+";"+UMI+"\n")
-        print(read.seq+"\n")
-        print("+\n")
-        print(read.qual+"\n")
+            print("@"+read.qname+";"+cell_barcode+";"+UMI)
+        print(read.seq)
+        print("+")
+        print(read.qual)
