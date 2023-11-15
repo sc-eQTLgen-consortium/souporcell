@@ -32,8 +32,7 @@ for read in bam:
         assert len(tokens) == 2
         read.set_tag(CELL_TAG, tokens[-1])
     else:
-        print(tokens)
-        print(len(tokens))
+        #### removed print statements
         assert len(tokens) == 3
         read.set_tag(CELL_TAG, tokens[-2])
         read.set_tag(UMI_TAG, tokens[-1])
