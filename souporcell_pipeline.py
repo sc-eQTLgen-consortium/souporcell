@@ -399,12 +399,11 @@ def freebayes(args, bam, fasta):
             subprocess.check_call(['rm', tmp])
 
 
-        with gzip.open(args.out_dir + "/common_variants_covered_tmp.vcf.gz", 'wt') as vcf:
-            bedtools_process = subprocess.Popen(["bedtools", "intersect", "-wa", "-a", args.common_variants, "-b", args.out_dir + "/depth_merged.bed"], stdout = subprocess.PIPE)
-            subprocess.check_call(["gzip", "-c"], stdin=bedtools_process.stdout, stdout = vcf)
-        with gzip.open(args.out_dir + "/common_variants_covered_tmp.vcf.gz", 'rt') as vcf:
-            with gzip.open(args.common_variants, 'rt') as common:
-                with gzip.open(args.out_dir + "/common_variants_covered.vcf.gz",'wt') as out:
+        with open(args.out_dir + "/common_variants_covered_tmp.vcf", 'w') as vcf:
+            subprocess.check_call(["bedtools", "intersect", "-wa", "-a", args.common_variants, "-b", args.out_dir + "/depth_merged.bed"], stdout = vcf)
+        with open(args.out_dir + "/common_variants_covered_tmp.vcf") as vcf:
+            with open(args.common_variants) as common:
+                with open(args.out_dir + "/common_variants_covered.vcf",'w') as out:
                     for line in common:
                         if line.startswith("#"):
                             out.write(line)
@@ -412,10 +411,9 @@ def freebayes(args, bam, fasta):
                             break
                     for line in vcf:
                         out.write(line)
-        subprocess.check_call(['rm', args.out_dir + "/common_variants_covered_tmp.vcf.gz"])
         with open(args.out_dir + "/variants.done", 'w') as done:
-            done.write(args.out_dir + "/common_variants_covered.vcf.gz" + "\n")
-        return(args.out_dir + "/common_variants_covered.vcf.gz")
+            done.write(args.out_dir + "/common_variants_covered.vcf" + "\n")
+        return(args.out_dir + "/common_variants_covered.vcf")
 
     regions = get_fasta_regions(args.fasta, int(args.threads))
     print(regions)
@@ -525,11 +523,11 @@ def vartrix(args, final_vcf, final_bam):
 
 def souporcell(args, ref_mtx, alt_mtx, final_vcf):
     print("running souporcell clustering")
-    cluster_file = args.out_dir + "/clusters_tmp.tsv.gz"
-    with gzip.open(cluster_file, 'wt') as log:
+    cluster_file = args.out_dir + "/clusters_tmp.tsv"
+    with open(cluster_file, 'w') as log:
         with open(args.out_dir+"/clusters.err",'w') as err:
             directory = os.path.dirname(os.path.realpath(__file__))
-            cmd = [directory+"/souporcell.py", "-k", args.clusters, "-a", alt_mtx, "-r", ref_mtx,
+            cmd = [directory+"/souporcell/target/release/souporcell", "-k",args.clusters, "-a", alt_mtx, "-r", ref_mtx,
                 "--restarts", str(args.restarts), "-b", args.barcodes, "--min_ref", args.min_ref, "--min_alt", args.min_alt,
                 "--threads", str(args.threads)]
             if not(args.known_genotypes == None):
@@ -543,12 +541,11 @@ def souporcell(args, ref_mtx, alt_mtx, final_vcf):
 
 def doublets(args, ref_mtx, alt_mtx, cluster_file):
     print("running souporcell doublet detection")
-    doublet_file = args.out_dir + "/clusters.tsv.gz"
-    with gzip.open(doublet_file, 'wt') as dub:
+    doublet_file = args.out_dir + "/clusters.tsv"
+    with open(doublet_file, 'w') as dub:
         with open(args.out_dir+"/doublets.err",'w') as err:
             directory = os.path.dirname(os.path.realpath(__file__))
-            subprocess.check_call([directory+"/troublet", "--alts", alt_mtx, "--refs", ref_mtx, "--clusters", cluster_file], stdout = dub, stderr = err)
-    subprocess.check_call(['rm', cluster_file])
+            subprocess.check_call([directory+"/troublet/target/release/troublet", "--alts", alt_mtx, "--refs", ref_mtx, "--clusters", cluster_file], stdout = dub, stderr = err)
     subprocess.check_call(['touch', args.out_dir + "/troublet.done"])
     return(doublet_file)
 
@@ -556,7 +553,7 @@ def consensus(args, ref_mtx, alt_mtx, doublet_file):
     print("running co inference of ambient RNA and cluster genotypes")
     directory = os.path.dirname(os.path.realpath(__file__))
     subprocess.check_call([directory+"/consensus.py", "-c", doublet_file, "-a", alt_mtx, "-r", ref_mtx, "-p", args.ploidy,
-        "--output_dir",args.out_dir,"--soup_out", args.out_dir + "/ambient_rna.txt", "--vcf_out", args.out_dir + "/cluster_genotypes.vcf.gz", "--vcf", final_vcf])
+        "--output_dir",args.out_dir,"--soup_out", args.out_dir + "/ambient_rna.txt", "--vcf_out", args.out_dir + "/cluster_genotypes.vcf", "--vcf", final_vcf])
     subprocess.check_call(['touch', args.out_dir + "/consensus.done"])
 
 
@@ -601,10 +598,10 @@ ref_mtx = args.out_dir + "/ref.mtx"
 alt_mtx = args.out_dir + "/alt.mtx"
 if not(os.path.exists(args.out_dir + "/clustering.done")):
     souporcell(args, ref_mtx, alt_mtx, final_vcf)
-cluster_file = args.out_dir + "/clusters_tmp.tsv.gz"
+cluster_file = args.out_dir + "/clusters_tmp.tsv"
 if not(os.path.exists(args.out_dir + "/troublet.done")):
     doublets(args, ref_mtx, alt_mtx, cluster_file)
-doublet_file = args.out_dir + "/clusters.tsv.gz"
+doublet_file = args.out_dir + "/clusters.tsv"
 if not(os.path.exists(args.out_dir + "/consensus.done")):
     consensus(args, ref_mtx, alt_mtx, doublet_file)
 print("done")
