@@ -21,14 +21,7 @@ dirname = args.output_dir
 
 
 def myopen(fname): return open(fname, 'rb') if fname.endswith('.gz') else open(fname)
-vcftemplate = vcf.Reader(myopen(args.vcf))
-potential_RNAedits = set()
-excluded = 0
-for (index, rec) in enumerate(vcftemplate):
-    if (rec.REF == "T" and str(rec.ALT[0]) == "C") or (rec.REF == "A" and str(rec.ALT[0]) == "G"):
-        potential_RNAedits.add(index+1)
-        excluded += 1
-print(str(excluded) +" excluded for potential RNA editing")
+
 
 cell_genotype_consensus = """
 data {
@@ -164,17 +157,26 @@ else:
     args.ploidy = 2
 import os
 import pickle
-sm = pickle.load(open(os.path.realpath(__file__)[0:-12]+"stan_consensus.pickle",'rb'))
-#sm = pystan.StanModel(model_code=cell_genotype_consensus)
-#with open("stan_consensus.pickle",'wb') as model:
-#    pickle.dump(sm, model)
-#assert False
+
+# sm = pickle.load(open(os.path.realpath(__file__)[0:-12]+"stan_consensus.pickle",'rb'))
+sm = pystan.StanModel(model_code=cell_genotype_consensus)
+# with open("stan_consensus.pickle", 'wb') as model:
+#     pickle.dump(sm, model)
 from scipy.special import logsumexp
+
+vcftemplate = vcf.Reader(myopen(args.vcf))
+potential_RNAedits = set()
+excluded = 0
+for (index, rec) in enumerate(vcftemplate):
+    if (rec.REF == "T" and str(rec.ALT[0]) == "C") or (rec.REF == "A" and str(rec.ALT[0]) == "G"):
+        potential_RNAedits.add(index + 1)
+        excluded += 1
+print(str(excluded) + " excluded for potential RNA editing")
 
 #print("got here")
 
 doublets = set()
-with open(args.clusters) as dubs:
+with gzip.open(args.clusters, 'rt') as dubs:
     dubs.readline() # get rid of header
     for (index, line) in enumerate(dubs):
         if "doublet" in line or "unassigned" in line:
@@ -188,7 +190,7 @@ cluster_cells = {}
 max_cluster = -1
 total_cells = 0
 cell_size = {}
-with open(args.clusters) as assignments:
+with gzip.open(args.clusters, 'rt') as assignments:
     assignments.readline()
     for (index, line) in enumerate(assignments):
         if index in doublets:
@@ -364,8 +366,10 @@ import gzip
 vcftemplate = vcf.Reader(myopen(args.vcf))
 vcfreader = vcf.Reader(myopen(args.vcf))
 import math
-tmp_vcf = dirname+"/tempsouporcell.vcf"
-with open(tmp_vcf,'w') as geno:
+#### editted tmp_vcf = dirname+"/tempsouporcell.vcf" to:::::::::::: tmp_vcf = dirname+"/tempsouporcell.vcf.gz"
+tmp_vcf = dirname+"/tempsouporcell.vcf.gz"
+#### editted with open(tmp_vcf,'w') as geno: to:::::::::::: with gzip.open(tmp_vcf,'wt') as geno:
+with gzip.open(tmp_vcf, 'wt') as geno:
     vcfwriter = vcf.Writer(geno,vcftemplate)
     samples = [str(cluster) for cluster in range(max_cluster+1)]
     vcfwriter.template.samples = samples
@@ -375,7 +379,7 @@ with open(tmp_vcf,'w') as geno:
         if locus in locus_index:
             newrec = vcf.model._Record(rec.CHROM, rec.POS, rec.ID, rec.REF, rec.ALT, rec.QUAL, rec.FILTER, rec.INFO, 'GT:AO:RO:T:E:GO:GN', {str(x):x for x in range(max_cluster+1)})
             calls = []
-            
+
             for cluster in range(max_cluster+1):
                 genotypes = fit['genotypes'][locus_index[locus]][cluster]
                 sumexp = logsumexp(genotypes)#[math.exp(x) for x in genotypes])
@@ -386,9 +390,9 @@ with open(tmp_vcf,'w') as geno:
                         go.append('NaN')
                     else:
                         go.append(str(int(g)))
-                    
+
                 go = ",".join(go)
-                
+
                 #if sumexp == 0:
                 #    posteriors = [0.333 for x in range(len(genotypes))]
                 #else:
@@ -436,7 +440,8 @@ with open(tmp_vcf,'w') as geno:
                 calls.append(vcf.model._Call(newrec, str(cluster), CallData(gt, ao, ro, truth, err, go, gn)))
             newrec.samples = calls
             vcfwriter.write_record(newrec)
-with open(tmp_vcf) as tmp:
+#### editted with open(tmp_vcf) as tmp: to:::::::::::: with gzip.open(tmp_vcf, 'rt') as tmp:
+with gzip.open(tmp_vcf, 'rt') as tmp:
     with gzip.open(args.vcf_out, 'wt') as out:
         for line in tmp:
             if line.startswith("#"):
