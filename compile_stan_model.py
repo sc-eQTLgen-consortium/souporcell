@@ -130,8 +130,8 @@ generated quantities {
 }
 """
 
-import os
-import pickle
-sm = pystan.StanModel(model_code=cell_genotype_consensus)
-with open(os.path.realpath(__file__)[0:-21]+"stan_consensus.pickle",'wb') as model:
-    pickle.dump(sm, model)
+# import os
+# import pickle
+# sm = pystan.StanModel(model_code=cell_genotype_consensus)
+# with open(os.path.realpath(__file__)[0:-21]+"stan_consensus.pickle",'wb') as model:
+#     pickle.dump(sm, model)
